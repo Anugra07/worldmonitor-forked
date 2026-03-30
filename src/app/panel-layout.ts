@@ -792,6 +792,10 @@ export class PanelLayoutManager implements AppModule {
       (!_wmKeyPresent && !isProUser()) ? ['Pre-market watchlist priorities', 'Action plan for the session', 'Risk watch tied to current finance headlines'] : undefined,
     );
 
+    this.lazyPanel('analyst', () =>
+      import('@/components/AnalystPanel').then(m => new m.AnalystPanel()),
+    );
+
     this.lazyPanel('market-implications', () =>
       import('@/components/MarketImplicationsPanel').then(m => new m.MarketImplicationsPanel()),
       undefined,

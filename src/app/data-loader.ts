@@ -173,6 +173,7 @@ import { fetchCachedRiskScores } from '@/services/cached-risk-scores';
 import type { ThreatLevel as ClientThreatLevel } from '@/types';
 import type { NewsItem as ProtoNewsItem, ThreatLevel as ProtoThreatLevel } from '@/generated/client/worldmonitor/news/v1/service_client';
 import { fetchMarketImplications } from '@/services/market-implications';
+import { fetchAnalystOverview } from '@/services/analyst';
 
 const PROTO_TO_CLIENT_LEVEL: Record<ProtoThreatLevel, ClientThreatLevel> = {
   THREAT_LEVEL_UNSPECIFIED: 'info',
@@ -398,6 +399,9 @@ export class DataLoaderManager implements AppModule {
       }
       if (shouldLoad('forecast')) {
         tasks.push({ name: 'forecasts', task: runGuarded('forecasts', () => this.loadForecasts()) });
+      }
+      if (shouldLoad('analyst')) {
+        tasks.push({ name: 'analystOverview', task: runGuarded('analystOverview', () => this.loadAnalystOverview()) });
       }
       if (SITE_VARIANT === 'full') tasks.push({ name: 'pizzint', task: runGuarded('pizzint', () => this.loadPizzInt()) });
       if (shouldLoad('economic')) {
@@ -1451,6 +1455,28 @@ export class DataLoaderManager implements AppModule {
       this.callPanel('market-implications', 'showUnavailable');
     } finally {
       this.ctx.inFlight.delete('marketImplications');
+    }
+  }
+
+  async loadAnalystOverview(force = false): Promise<void> {
+    if (this.ctx.isDestroyed) return;
+    try {
+      const overview = await fetchAnalystOverview(force);
+      if (!overview.available && !overview.brief) {
+        this.callPanel(
+          'analyst',
+          'showUnavailable',
+          overview.error || 'Local analyst service is unavailable. Start the finance backend and refresh this panel.',
+        );
+        return;
+      }
+      this.callPanel('analyst', 'renderOverview', overview, 'live');
+    } catch (error) {
+      this.callPanel(
+        'analyst',
+        'showUnavailable',
+        error instanceof Error ? error.message : 'Failed to load the local analyst overview.',
+      );
     }
   }
 
